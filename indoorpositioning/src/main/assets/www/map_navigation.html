@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Leaflet mobile example</title>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="stylesheet" href="https://npmcdn.com/leaflet@0.7.7/dist/leaflet.css"/>
+    <script src="https://npmcdn.com/leaflet@0.7.7/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.0.0.min.js"></script>
+    <script src="http://cbaines.net/projects/osm/leaflet-indoor/leaflet-indoor.js"></script>
+    <!-- <script src="http://calvinmetcalf.github.io/leaflet-ajax/dist/leaflet.ajax.min.js"></script> -->
+
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+
+    </style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<script>
+        var greenDot = L.icon({
+            iconUrl: 'green_dot.png',
+            iconSize: [24, 24]
+        });
+        var blueDot = L.icon({
+            iconUrl: 'blue_dot.png',
+            iconSize: [24, 24]
+        });
+        var redDot = L.icon({
+            iconUrl: 'red_dot.png',
+            iconSize: [24, 24]
+        });
+        var locationIcon= L.icon({
+            iconUrl: 'location-icon.png',
+            iconSize: [24, 32]
+        });
+
+        var map = L.map('map');
+        var levelControlGlobal;
+        var indoorLayerGlobal;
+        var locationMarker = L.marker([0.0, 0.0], {
+            icon: locationIcon
+        });
+        locationMarker.addTo(map);
+
+        L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 25
+        }).addTo(map);
+
+        function onLocationFound(e) {
+            var radius = e.accuracy / 2;
+
+            L.marker(e.latlng).addTo(map)
+                .bindPopup("You are within " + radius + " meters from this point").openPopup();
+
+            L.circle(e.latlng, radius).addTo(map);
+        }
+
+        function onLocationError(e) {
+            alert(e.message);
+        }
+
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+
+        map.setView([52.219020, 21.011835], 17);
+        // map.locate({setView: true, maxZoom: 16});
+
+        var levels = {};
+        var currentLevel;
+        var start = null;
+        var end = null;
+        var currentPosition = null;
+
+        $.getJSON("map.geojson", function(geoJSON) {
+            var indoorLayer = new L.Indoor(geoJSON, {
+            onEachFeature: (feature, layer) => {
+                layer.on('click', onMapClick);
+            }
+            });
+            indoorLayer.setLevel("1");
+            indoorLayer.addTo(map);
+            var levelControl = new L.Control.Level({
+                level: "1",
+                levels: indoorLayer.getLevels()
+            });
+
+            // Connect the level control to the indoor layer
+            levelControl.addEventListener("levelchange", changeLevel, indoorLayer);
+            levelControl.addTo(map);
+            levelControlGlobal = levelControl;
+            indoorLayerGlobal = indoorLayer;
+            indoorLayerGlobal.getLevels().forEach((level) => levels[level] = new L.layerGroup());
+            currentLevel = levels[indoorLayerGlobal.getLevel()];
+            currentLevel.addTo(map);
+        });
+
+        function changeLevel(level) {
+            map.removeLayer(currentLevel);
+            currentLevel = levels[level.newLevel];
+            currentLevel.addTo(map);
+            indoorLayerGlobal.setLevel(level.newLevel);
+        }
+
+	    map.doubleClickZoom.disable();
+
+        function onMapClick(e) {
+            if (start == null || end == null) {
+                var marker = new L.marker(e.latlng).addTo(currentLevel).on('dblclick', onMarkerDoubleClick);
+                if (start == null) {
+                    marker.setIcon(greenDot);
+                    start = {marker: marker, position: {longitude: marker._latlng.lng, latitude: marker._latlng.lat, height: indoorLayerGlobal.getLevel()}};
+                } else {
+                    marker.setIcon(redDot);
+                    end = {marker: marker, position: {longitude: marker._latlng.lng, latitude: marker._latlng.lat, height: indoorLayerGlobal.getLevel()}};
+                }
+            }
+        }
+
+        function onMarkerDoubleClick(e) {
+            if (e.target == start.marker) {
+                currentLevel.removeLayer(start.marker);
+                start = null;
+            } else {
+                currentLevel.removeLayer(end.marker);
+                end = null;
+            }
+        }
+
+        function getStartPosition() {
+            return JSON.stringify(start.position);
+        }
+
+        function getEndPosition() {
+            return JSON.stringify(end.position);
+        }
+
+        function drawPath(pathArrayJson) {
+            start.marker.off('dblclick');
+            end.marker.off('dblclick');
+            var pathArray = JSON.parse(pathArrayJson);
+            pathArray.forEach((firstPosition, arrayIndex) => {
+                if (arrayIndex + 1 < pathArray.length) {
+                    secondPosition = pathArray[arrayIndex + 1];
+                    changeLevel({newLevel: firstPosition.height});
+                    L.polyline([L.latLng(firstPosition.latitude, firstPosition.longitude), L.latLng(secondPosition.latitude, secondPosition.longitude)], {color: 'green'}).addTo(currentLevel);
+                }
+            });
+        }
+
+        function clearPath() {
+            start = null;
+            end = null;
+            indoorLayerGlobal.getLevels().forEach((level) => levels[level].clearLayers());
+        }
+
+        function updateLocation(lat, lng, level) {
+            if (currentPosition == null) {
+                initCurrentPosition(lat, lng, level);
+                return;
+            }
+            levels[currentPosition.level].removeLayer(currentPosition.marker);
+            currentPosition.marker.setLatLng(L.latLng(lat, lng)).addTo(levels[level]);
+            currentPosition.level = level;
+        }
+
+        function initCurrentPosition(lat, lng, level) {
+            changeLevel({newLevel: level});
+            var latLng = L.latLng(lat, lng);
+            map.flyTo(latLng);
+            currentPosition = {level: level, marker: new L.marker(latLng).setIcon(blueDot).addTo(currentLevel)};
+        }
+</script>
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+[
+  {
+    "transmitterId" : "10:fe:ed:df:0d:5e",
+    "position" : {
+      "latitude" : "52.13168272",
+      "longitude" : "21.06644277",
+      "height" : "1.0"
+    }
+  },
+  {
+    "transmitterId" : "08:95:2a:5b:fc:b5",
+    "position" : {
+      "latitude" : "52.1317494",
+      "longitude" : "21.06649775",
+      "height" : "1.0"
+    }
+  },
+  {
+    "transmitterId" : "c6:e9:84:53:e6:14",
+    "position" : {
+      "latitude" : "52.13171112",
+      "longitude" : "21.06660169",
+      "height" : "1.0"
+    }
+  }
+]

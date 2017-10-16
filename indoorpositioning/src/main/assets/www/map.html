@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Leaflet mobile example</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <link rel="stylesheet" href="https://npmcdn.com/leaflet@0.7.7/dist/leaflet.css" />
+    <script src="https://npmcdn.com/leaflet@0.7.7/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.0.0.min.js"></script>
+    <script src="http://cbaines.net/projects/osm/leaflet-indoor/leaflet-indoor.js"></script>
+    <!-- <script src="http://calvinmetcalf.github.io/leaflet-ajax/dist/leaflet.ajax.min.js"></script> -->
+
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        html,
+        body,
+        #map {
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <script>
+        var blueDot = L.icon({
+            iconUrl: 'blue_dot.png',
+            iconSize: [24, 24]
+        });
+        var redDot = L.icon({
+            iconUrl: 'red_dot.png',
+            iconSize: [24, 24]
+        });
+
+        var map = L.map('map');
+        var levelControlGlobal;
+        var indoorLayerGlobal;
+        var locationMarker = L.marker([0.0, 0.0], {
+            icon: blueDot
+        });
+        locationMarker.addTo(map);
+
+        // L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+        //     attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+        //         '<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+        //         'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+        //     id: 'mapbox.streets',
+        //     maxZoom: 20,
+        //     accessToken: 'pk.eyJ1IjoiaWVhaW9hIiwiYSI6ImNpcHNlYXlleDAwMW1odG0yNGVkMDN5ZmEifQ.WJXgpufSxQSZrSaNuIcFGg'
+        // }).addTo(map);
+
+        L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 25
+        }).addTo(map);
+
+        function onLocationFound(e) {
+            var radius = e.accuracy / 2;
+
+            L.marker(e.latlng).addTo(map)
+                .bindPopup("You are within " + radius + " meters from this point").openPopup();
+
+            L.circle(e.latlng, radius).addTo(map);
+        }
+
+        function onLocationError(e) {
+            alert(e.message);
+        }
+
+        function updateLocation(lat, lng, level) {
+            locationMarker.setLatLng([lat, lng]);
+            levelControlGlobal.setLevel(level)
+            map.setView([lat, lng]);
+        }
+
+        function setLocationOnMapCenter() {
+            var mapCenter = map.getCenter()
+            locationMarker.setLatLng(mapCenter);
+            return mapCenter.lat + "," + mapCenter.lng + "," + indoorLayerGlobal.getLevel();
+        }
+
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+
+        L.marker([52.219020, 21.011835]).addTo(map);
+
+        // L.polygon([
+        //     [52.218730, 21.010727],
+        //     [52.219153, 21.010746],
+        //     [52.219068, 21.013010],
+        //     [52.218706, 21.012956]
+        // ]).addTo(map);
+
+        map.setView([52.219020, 21.011835], 17);
+        // map.locate({setView: true, maxZoom: 16});
+
+        var markers = [];
+        var levels = {};
+        var currentLevel;
+        var currentMarker = null;
+
+        $.getJSON("map.geojson", function(geoJSON) {
+            var indoorLayer = new L.Indoor(geoJSON);
+            indoorLayer.setLevel("1");
+            indoorLayer.addTo(map);
+            var levelControl = new L.Control.Level({
+                level: "1",
+                levels: indoorLayer.getLevels()
+            });
+
+            // Connect the level control to the indoor layer
+            levelControl.addEventListener("levelchange", changeLevel, indoorLayer);
+            levelControl.addTo(map);
+            levelControlGlobal = levelControl;
+            indoorLayerGlobal = indoorLayer;
+            indoorLayerGlobal.getLevels().forEach((level) => levels[level] = new L.layerGroup());
+            currentLevel = levels[indoorLayerGlobal.getLevel()];
+            currentLevel.addTo(map);
+        });
+
+        function changeLevel(level) {
+            map.removeLayer(currentLevel);
+            currentLevel = levels[level.newLevel];
+            currentLevel.addTo(map);
+            indoorLayerGlobal.setLevel(level.newLevel);
+        }
+
+	    map.doubleClickZoom.disable();
+
+        function loadSavedPositions(positionsJson) {
+            var positionsArray = JSON.parse(positionsJson);
+            positionsArray.forEach((position) => {
+                changeLevel({newLevel: position.height});
+                levelControlGlobal.setLevel(position.height);
+                var marker = new L.marker([position.latitude, position.longitude]).addTo(currentLevel).on('click', onMarkerClick).setIcon(blueDot);
+                markers.push({marker: marker, level: indoorLayerGlobal.getLevel(), position: position});
+            });
+        }
+
+        function onMarkerClick(e) {
+            if (currentMarker == e.target) {
+                currentMarker = null;
+                e.target.setIcon(blueDot);
+                return;
+            }
+            if (currentMarker != null) {
+                currentMarker.target.setIcon(blueDot);
+            }
+            e.target.setIcon(redDot);
+            currentMarker = e.target;
+        }
+
+        function getCurrentPosition() {
+            var position = null;
+            var extendedMarker = markers.find((x) => x.marker == currentMarker);
+            if (extendedMarker != null) {
+                position = extendedMarker.position;
+            }
+            return JSON.stringify(position);
+        }
+    </script>
+</body>
+
+</html>

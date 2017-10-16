@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">PositionCalculator</string>
+    <string name="hybrid_position_map">Hybrid Position Map</string>
+    <string name="collect_patterns_map">Collect Patterns</string>
+    <string name="sensors_map">Sensors Only</string>
+    <string name="trilateration_map">Trilateration Only</string>
+    <string name="pattern_map">Pattern Only</string>
+    <string name="create_connection_map">Create connections map</string>
+    <string name="navigation_map">Navigation map</string>
+</resources>

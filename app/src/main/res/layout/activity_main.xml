@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context=".activities.MainActivity">
+
+    <Button
+        android:id="@+id/patternPositionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onPatternPositionButton"
+        android:text="@string/pattern_map"
+        android:layout_above="@+id/connectionsMapButton"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/trilaterationPositionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onTrilaterationPositionButton"
+        android:text="@string/trilateration_map"
+        android:layout_above="@+id/patternPositionButton"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/sensorsPositionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onSensorPositionButton"
+        android:text="@string/sensors_map"
+        android:layout_above="@+id/trilaterationPositionButton"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/collectPatternsMap"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onCollectPatternsMapClick"
+        android:text="@string/collect_patterns_map"
+        android:layout_above="@+id/sensorsPositionButton"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/hybridPositionMap"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onHybridPositionMapClick"
+        android:text="@string/hybrid_position_map"
+        android:layout_above="@+id/collectPatternsMap"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/connectionsMapButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onConnectionsMapButton"
+        android:text="@string/create_connection_map"
+        android:layout_above="@+id/navigationMapButton"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/navigationMapButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onNavigationMapButton"
+        android:text="@string/navigation_map"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true" />
+</RelativeLayout>
